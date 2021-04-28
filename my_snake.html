@@ -1,0 +1,260 @@
+<div class="table-container">
+	<div class="header"></div>
+	<table id="table-map"></table>
+</div>
+
+<style>
+.table-container {
+	position: fixed;
+}
+
+.header {
+	height: 30px;
+	background-color: grey;
+	cursor: move;
+}
+
+.table-container table {
+    border-collapse: collapse;
+}
+
+table td {
+	display: inline-block;
+  width: 10px;
+  height: 10px;
+  padding: 5px;
+  border: 1px solid rgba(0,0, 0, 0.07);
+}
+
+tr {
+  line-height: 10px;
+}
+</style>
+
+<script>
+const tableContainerElement = document.getElementsByClassName('table-container')[0];
+const headerElement = document.getElementsByClassName('header')[0];
+
+// resize logic
+let bodyLastLocation = null;
+
+tableContainerElement.addEventListener('mousedown', e => {
+	bodyLastLocation = {
+		x: e.clientX,
+		y: e.clientY
+	};
+});
+
+tableContainerElement.addEventListener('mouseup', e => {
+	bodyLastLocation = null;
+});
+
+tableContainerElement.addEventListener('mouseout', e => {
+	bodyLastLocation = null;
+});
+
+tableContainerElement.addEventListener('mousemove', e => {
+	//> cursor change
+	let offsetX = e.offsetX;
+	let offsetY = e.offsetY;
+
+	let element = e.target;
+
+	while (element !== tableContainerElement) {
+		offsetX += element.offsetLeft;
+		offsetY += element.offsetTop;
+		element = element.parentNode;
+	}
+
+	offsetY /= 2;
+
+	if (offsetX < 10 || offsetX > tableContainerElement.offsetWidth - 10) {
+		tableContainerElement.style.cursor = 'w-resize';
+		console.log(bodyLastLocation)
+		if (bodyLastLocation) {
+			tableContainerElement.style.width = tableContainerElement.offsetWidth + e.clientX - bodyLastLocation.x + 'px';
+			
+			bodyLastLocation.x = e.clientX;
+			bodyLastLocation.y = e.clientY;
+		}		
+	} else if (offsetY > (tableContainerElement.offsetHeight - headerElement.offsetHeight)) {
+		tableContainerElement.style.cursor = 'ns-resize';
+	} else {
+		tableContainerElement.style.cursor = 'default';
+	}
+	//<
+});
+
+// move logic
+let headerLastLocation = null;
+
+headerElement.addEventListener('mousedown', e => {
+	headerLastLocation = {
+		x: e.clientX,
+		y: e.clientY
+	};
+});
+
+headerElement.addEventListener('mouseup', e => {
+	headerLastLocation = null;
+});
+
+headerElement.addEventListener('mouseout', e => {
+	headerLastLocation = null;
+});
+
+headerElement.addEventListener('mousemove', e => {
+	if (headerLastLocation) {
+
+		tableContainerElement.style.top = (e.clientY + e.clientY - headerLastLocation.y - e.offsetY) + 'px';
+		tableContainerElement.style.left = (e.clientX + e.clientX - headerLastLocation.x - e.offsetX) + 'px';
+		
+		headerLastLocation.x = e.clientX;
+		headerLastLocation.y = e.clientY;
+	}
+});
+
+// game logic
+const tableMap = document.getElementById('table-map');
+
+let game = {};
+
+const initGame = () => {
+  game = {
+    size: {
+      x: 20,
+      y: 20,
+    },
+    direction: {
+      x: -1,
+      y: 0
+    },
+    sanke: [],
+    map: []
+  };
+
+	for (let i = 0; i < game.size.y; i++) { // init map
+    game.map.push([]);
+    for (let j = 0; j < game.size.x; j++) {
+      game.map[i].push(0);
+    }
+  }
+
+  const initSnakeX = Math.floor(Math.random() * game.size.x + 2) - 4;
+  const initSnakeY = Math.floor(Math.random() * game.size.y);
+  const snakeLength = 3;
+
+  game.snake = [];
+
+  for (let i = 0; i < snakeLength; i++) {
+    game.snake.push([ initSnakeX + i, initSnakeY ]);  // init snake
+  }
+  
+  game.map[Math.floor(Math.random() * game.size.y)][Math.floor(Math.random() * game.size.x)] = 1; // init tasty food!
+};
+
+const renderMap = () => {
+	tableMap.innerHTML = '';
+  
+  for (let i = 0; i < game.map.length; i++) {
+  	const rowElement = document.createElement('tr');
+  
+  	for (let j = 0; j < game.map[i].length; j++) {
+		const cellElement = document.createElement('td');
+      
+	  const snakePartIndex = game.snake.findIndex(bodyPart => bodyPart[0] === j && bodyPart[1] === i);
+	  
+      if (snakePartIndex === 0) { // the snake head
+		cellElement.style.backgroundImage = 'url(\'someones_end.png\')';
+		cellElement.style.backgroundSize = '100% 100%'
+      } else if (snakePartIndex > 0) {  // the snake body
+		cellElement.style.backgroundImage = 'url(\'someones_body.png\')';
+		cellElement.style.backgroundSize = '100% 100%'
+	  } else if (game.map[j][i] === 1) {  // food
+		cellElement.style.backgroundColor  = 'green';
+      } else {
+		cellElement.style.backgroundColor  = '#ccc';
+      }
+      
+      rowElement.appendChild(cellElement);
+    }
+    
+    tableMap.appendChild(rowElement);
+  }
+};
+
+document.addEventListener('keyup', e => {
+	switch (e.key) {
+	case 'a':
+    	game.direction.x = (game.direction.x === 0) ? -1 : game.direction.x;
+		game.direction.y = 0;
+    	break;
+    case 'd':
+    	game.direction.x = (game.direction.x === 0) ? 1 : game.direction.x;
+		game.direction.y = 0;
+   	 break;
+    case 's':
+    	game.direction.y = (game.direction.y === 0) ? 1 : game.direction.y;
+		game.direction.x = 0;
+    	break;
+    case 'w':
+    	game.direction.y = (game.direction.y === 0) ? -1 : game.direction.y;
+		game.direction.x = 0;
+    	break;
+  }
+});
+
+setInterval(() => {
+	let tmp = [game.snake[0][0], game.snake[0][1]]; // get the snake's head
+  
+ 	game.snake[0][0] += game.direction.x; // move the snake's head
+ 	game.snake[0][1] += game.direction.y;
+ 
+ 	for (let i = 1; i < game.snake.length; i++) { // update the snake's body position
+		let localTmp = [...game.snake[i]];
+		
+		game.snake[i][0] = tmp[0];
+		game.snake[i][1] = tmp[1];
+		
+		tmp = localTmp;
+	}
+  
+  if ( // is game lost
+  	game.snake[0][0] < 0 || game.snake[0][0] >= game.size.x ||
+    game.snake[0][1] < 0 || game.snake[0][1] >= game.size.y ||
+    game.snake.slice(1).some(bodyPart => bodyPart[0] === game.snake[0][0] && bodyPart[1] === game.snake[0][1])
+  )
+  {
+  	initGame();
+  	console.log('FUK');
+	renderMap();
+	return; // the player lost
+  }
+
+	if (game.map[game.snake[0][0]][game.snake[0][1]] === 1) { // is the snake over the food
+		game.map[game.snake[0][0]][game.snake[0][1]] = 0; // clear old food
+		
+		const twoLastSnakeParts = game.snake.slice(-2);
+		
+		let x = Math.abs(twoLastSnakeParts[0][0] - twoLastSnakeParts[1][0]);
+		let y = Math.abs(twoLastSnakeParts[0][1] - twoLastSnakeParts[1][1]);
+		
+		game.snake.push([twoLastSnakeParts[1][0] + x, twoLastSnakeParts[1][1] + y]);
+		
+		let newFoodX;
+		let newFoodY;
+		
+		do { // create new food
+		  newFoodX = Math.floor(Math.random() * game.size.x);
+			newFoodY = Math.floor(Math.random() * game.size.y);
+			game.map[newFoodY][newFoodX] = 1;
+		} while (game.snake.some(bodyPart => bodyPart[x] === newFoodX && bodyPart[y] === newFoodY))
+		
+		game.map[Math.floor(Math.random() * game.size.y)][Math.floor(Math.random() * game.size.x)]
+  }
+
+	renderMap();
+}, 180);
+
+initGame();
+</script>
