@@ -4,6 +4,10 @@
 </div>
 
 <style>
+body {
+	margin: 0;
+}
+
 .table-container {
 	position: fixed;
 }
@@ -11,13 +15,15 @@
 .header {
 	height: 30px;
 	background-color: grey;
-	cursor: move;
+	cursor: grab;
 }
 
 .score {
+	margin: 0;
 	line-height: 30px;
 	margin-left: 20px;
 	font-size: 2rem;
+	pointer-events: none;
 }
 
 .table-container table {
@@ -91,33 +97,25 @@ tableContainerElement.addEventListener('mousemove', e => {
 	//<
 });
 
-// move logic
-let headerLastLocation = null;
+// drag logic
+let cursorOffset = null;
 
 headerElement.addEventListener('mousedown', e => {
-	headerLastLocation = {
-		x: e.clientX,
-		y: e.clientY
+	cursorOffset = { 
+		x: e.clientX - tableContainerElement.offsetLeft, 
+		y: e.clientY - tableContainerElement.offsetTop,
 	};
 });
 
-headerElement.addEventListener('mouseup', e => {
-	headerLastLocation = null;
+window.addEventListener('mouseup', e => {
+	if (!cursorOffset) return;
+	cursorOffset = null;
 });
 
-headerElement.addEventListener('mouseout', e => {
-	headerLastLocation = null;
-});
-
-headerElement.addEventListener('mousemove', e => {
-	if (headerLastLocation) {
-
-		tableContainerElement.style.top = (e.clientY + e.clientY - headerLastLocation.y - e.offsetY) + 'px';
-		tableContainerElement.style.left = (e.clientX + e.clientX - headerLastLocation.x - e.offsetX) + 'px';
-		
-		headerLastLocation.x = e.clientX;
-		headerLastLocation.y = e.clientY;
-	}
+window.addEventListener('mousemove', e => {
+	if (!cursorOffset) return;
+	tableContainerElement.style.top = (e.clientY - cursorOffset.y) + 'px';
+	tableContainerElement.style.left = (e.clientX - cursorOffset.x) + 'px';
 });
 
 // game logic
