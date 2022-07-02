@@ -1,5 +1,5 @@
 <div class="table-container">
-	<div class="header"></div>
+	<div class="header"><p class="score"></p></div>
 	<table id="table-map"></table>
 </div>
 
@@ -12,6 +12,12 @@
 	height: 30px;
 	background-color: grey;
 	cursor: move;
+}
+
+.score {
+	line-height: 30px;
+	margin-left: 20px;
+	font-size: 2rem;
 }
 
 .table-container table {
@@ -116,8 +122,15 @@ headerElement.addEventListener('mousemove', e => {
 
 // game logic
 const tableMap = document.getElementById('table-map');
+const scoreDisplay = document.querySelector('.score');
 
 let game = {};
+
+// call this function to update the score
+const updateScore = () => {
+	game.score += 1;
+  	scoreDisplay.innerHTML = `score: ${game.score}`;
+};
 
 const initGame = () => {
   game = {
@@ -130,7 +143,8 @@ const initGame = () => {
       y: 0
     },
     sanke: [],
-    map: []
+    map: [],
+	score: 0
   };
 
 	for (let i = 0; i < game.size.y; i++) { // init map
@@ -151,6 +165,7 @@ const initGame = () => {
   }
   
   game.map[Math.floor(Math.random() * game.size.y)][Math.floor(Math.random() * game.size.x)] = 1; // init tasty food!
+  scoreDisplay.innerHTML = 'score: 0'; //display initial score
 };
 
 const renderMap = () => {
@@ -226,7 +241,7 @@ setInterval(() => {
   )
   {
   	initGame();
-  	console.log('FUK');
+  	console.log('Gave over :(');
 	renderMap();
 	return; // the player lost
   }
@@ -251,6 +266,9 @@ setInterval(() => {
 		} while (game.snake.some(bodyPart => bodyPart[x] === newFoodX && bodyPart[y] === newFoodY))
 		
 		game.map[Math.floor(Math.random() * game.size.y)][Math.floor(Math.random() * game.size.x)]
+
+		// udate score
+		updateScore();
   }
 
 	renderMap();
