@@ -1,4 +1,5 @@
 <div class="table-container">
+	<p class="resize"></p>
 	<div class="header"><p class="score"></p></div>
 	<table id="table-map"></table>
 </div>
@@ -10,12 +11,32 @@ body {
 
 .table-container {
 	position: fixed;
+	top: 100px;
+	left: 100px;
 }
 
 .header {
 	height: 30px;
 	background-color: grey;
 	cursor: grab;
+}
+
+.resize {
+	position: absolute;
+	top: 0;
+	right: 0;
+	margin: 0;
+	height: 20px;
+	width: 20px;
+	font-size: 1.3rem;
+}
+
+.resize::before {
+	content: "⠗";
+	position: absolute;
+	top: -2px;
+	right: 3px;
+	transform: rotate(-45deg);
 }
 
 .score {
@@ -48,54 +69,38 @@ const tableContainerElement = document.getElementsByClassName('table-container')
 const headerElement = document.getElementsByClassName('header')[0];
 
 // resize logic
-let bodyLastLocation = null;
+const resizeButton = document.querySelector('.resize');
+let initialCursorPosition = null;
+let trackScaleValue = null;
+let currentScaleValue = 1;
 
-tableContainerElement.addEventListener('mousedown', e => {
-	bodyLastLocation = {
+resizeButton.addEventListener('mouseover', e => {
+	e.currentTarget.style.cursor = 'sw-resize';
+});
+
+resizeButton.addEventListener('mousedown', e => {
+	initialCursorPosition = {
 		x: e.clientX,
 		y: e.clientY
 	};
 });
 
-tableContainerElement.addEventListener('mouseup', e => {
-	bodyLastLocation = null;
+window.addEventListener('mouseup', e => {
+	if(!initialCursorPosition) return;
+	currentScaleValue = trackScaleValue;
+	initialCursorPosition = null;
+})
+
+window.addEventListener('mousemove', e => {
+	if(!initialCursorPosition) return;
+	const gain = (e.clientX - initialCursorPosition.x) + (initialCursorPosition.y - e.clientY);
+	if(gain / tableContainerElement.clientWidth < -0.5) return;
+	const scaleValue = currentScaleValue + gain / tableContainerElement.clientWidth;
+
+	tableContainerElement.style.transform = `scale(${scaleValue})`;
+	trackScaleValue = scaleValue;
 });
 
-tableContainerElement.addEventListener('mouseout', e => {
-	bodyLastLocation = null;
-});
-
-tableContainerElement.addEventListener('mousemove', e => {
-	//> cursor change
-	let offsetX = e.offsetX;
-	let offsetY = e.offsetY;
-
-	let element = e.target;
-
-	while (element !== tableContainerElement) {
-		offsetX += element.offsetLeft;
-		offsetY += element.offsetTop;
-		element = element.parentNode;
-	}
-
-	offsetY /= 2;
-
-	if (offsetX < 10 || offsetX > tableContainerElement.offsetWidth - 10) {
-		tableContainerElement.style.cursor = 'w-resize';
-		console.log(bodyLastLocation)
-		if (bodyLastLocation) {
-			tableContainerElement.style.width = tableContainerElement.offsetWidth + e.clientX - bodyLastLocation.x + 'px';
-			
-			bodyLastLocation.x = e.clientX;
-			bodyLastLocation.y = e.clientY;
-		}		
-	} else if (offsetY > (tableContainerElement.offsetHeight - headerElement.offsetHeight)) {
-		tableContainerElement.style.cursor = 'ns-resize';
-	} else {
-		tableContainerElement.style.cursor = 'default';
-	}
-	//<
-});
 
 // drag logic
 let cursorOffset = null;
