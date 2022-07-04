@@ -1,17 +1,50 @@
 <div class="table-container">
-	<div class="header"></div>
+	<p class="resize"></p>
+	<div class="header"><p class="score"></p></div>
 	<table id="table-map"></table>
 </div>
 
 <style>
+body {
+	margin: 0;
+}
+
 .table-container {
 	position: fixed;
+	top: 100px;
+	left: 100px;
 }
 
 .header {
 	height: 30px;
 	background-color: grey;
-	cursor: move;
+	cursor: grab;
+}
+
+.resize {
+	position: absolute;
+	top: 0;
+	right: 0;
+	margin: 0;
+	height: 20px;
+	width: 20px;
+	font-size: 1.3rem;
+}
+
+.resize::before {
+	content: "⠗";
+	position: absolute;
+	top: -2px;
+	right: 3px;
+	transform: rotate(-45deg);
+}
+
+.score {
+	margin: 0;
+	line-height: 30px;
+	margin-left: 20px;
+	font-size: 2rem;
+	pointer-events: none;
 }
 
 .table-container table {
@@ -36,88 +69,71 @@ const tableContainerElement = document.getElementsByClassName('table-container')
 const headerElement = document.getElementsByClassName('header')[0];
 
 // resize logic
-let bodyLastLocation = null;
+const resizeButton = document.querySelector('.resize');
+let initialCursorPosition = null;
+let trackScaleValue = null;
+let currentScaleValue = 1;
 
-tableContainerElement.addEventListener('mousedown', e => {
-	bodyLastLocation = {
+resizeButton.addEventListener('mouseover', e => {
+	e.currentTarget.style.cursor = 'sw-resize';
+});
+
+resizeButton.addEventListener('mousedown', e => {
+	initialCursorPosition = {
 		x: e.clientX,
 		y: e.clientY
 	};
 });
 
-tableContainerElement.addEventListener('mouseup', e => {
-	bodyLastLocation = null;
+window.addEventListener('mouseup', e => {
+	if(!initialCursorPosition) return;
+	currentScaleValue = trackScaleValue;
+	initialCursorPosition = null;
+})
+
+window.addEventListener('mousemove', e => {
+	if(!initialCursorPosition) return;
+	const gain = (e.clientX - initialCursorPosition.x) + (initialCursorPosition.y - e.clientY);
+	if(gain / tableContainerElement.clientWidth < -0.5) return;
+	const scaleValue = currentScaleValue + gain / tableContainerElement.clientWidth;
+
+	tableContainerElement.style.transform = `scale(${scaleValue})`;
+	trackScaleValue = scaleValue;
 });
 
-tableContainerElement.addEventListener('mouseout', e => {
-	bodyLastLocation = null;
-});
 
-tableContainerElement.addEventListener('mousemove', e => {
-	//> cursor change
-	let offsetX = e.offsetX;
-	let offsetY = e.offsetY;
-
-	let element = e.target;
-
-	while (element !== tableContainerElement) {
-		offsetX += element.offsetLeft;
-		offsetY += element.offsetTop;
-		element = element.parentNode;
-	}
-
-	offsetY /= 2;
-
-	if (offsetX < 10 || offsetX > tableContainerElement.offsetWidth - 10) {
-		tableContainerElement.style.cursor = 'w-resize';
-		console.log(bodyLastLocation)
-		if (bodyLastLocation) {
-			tableContainerElement.style.width = tableContainerElement.offsetWidth + e.clientX - bodyLastLocation.x + 'px';
-			
-			bodyLastLocation.x = e.clientX;
-			bodyLastLocation.y = e.clientY;
-		}		
-	} else if (offsetY > (tableContainerElement.offsetHeight - headerElement.offsetHeight)) {
-		tableContainerElement.style.cursor = 'ns-resize';
-	} else {
-		tableContainerElement.style.cursor = 'default';
-	}
-	//<
-});
-
-// move logic
-let headerLastLocation = null;
+// drag logic
+let cursorOffset = null;
 
 headerElement.addEventListener('mousedown', e => {
-	headerLastLocation = {
-		x: e.clientX,
-		y: e.clientY
+	cursorOffset = { 
+		x: e.clientX - tableContainerElement.offsetLeft, 
+		y: e.clientY - tableContainerElement.offsetTop,
 	};
 });
 
-headerElement.addEventListener('mouseup', e => {
-	headerLastLocation = null;
+window.addEventListener('mouseup', e => {
+	if (!cursorOffset) return;
+	cursorOffset = null;
 });
 
-headerElement.addEventListener('mouseout', e => {
-	headerLastLocation = null;
-});
-
-headerElement.addEventListener('mousemove', e => {
-	if (headerLastLocation) {
-
-		tableContainerElement.style.top = (e.clientY + e.clientY - headerLastLocation.y - e.offsetY) + 'px';
-		tableContainerElement.style.left = (e.clientX + e.clientX - headerLastLocation.x - e.offsetX) + 'px';
-		
-		headerLastLocation.x = e.clientX;
-		headerLastLocation.y = e.clientY;
-	}
+window.addEventListener('mousemove', e => {
+	if (!cursorOffset) return;
+	tableContainerElement.style.top = (e.clientY - cursorOffset.y) + 'px';
+	tableContainerElement.style.left = (e.clientX - cursorOffset.x) + 'px';
 });
 
 // game logic
 const tableMap = document.getElementById('table-map');
+const scoreDisplay = document.querySelector('.score');
 
 let game = {};
+
+// call this function to update the score
+const updateScore = () => {
+	game.score += 1;
+  	scoreDisplay.innerHTML = `score: ${game.score}`;
+};
 
 const initGame = () => {
   game = {
@@ -130,7 +146,8 @@ const initGame = () => {
       y: 0
     },
     sanke: [],
-    map: []
+    map: [],
+	score: 0
   };
 
 	for (let i = 0; i < game.size.y; i++) { // init map
@@ -151,6 +168,7 @@ const initGame = () => {
   }
   
   game.map[Math.floor(Math.random() * game.size.y)][Math.floor(Math.random() * game.size.x)] = 1; // init tasty food!
+  scoreDisplay.innerHTML = 'score: 0'; //display initial score
 };
 
 const renderMap = () => {
@@ -226,7 +244,7 @@ setInterval(() => {
   )
   {
   	initGame();
-  	console.log('FUK');
+  	console.log('Gave over :(');
 	renderMap();
 	return; // the player lost
   }
@@ -251,6 +269,9 @@ setInterval(() => {
 		} while (game.snake.some(bodyPart => bodyPart[x] === newFoodX && bodyPart[y] === newFoodY))
 		
 		game.map[Math.floor(Math.random() * game.size.y)][Math.floor(Math.random() * game.size.x)]
+
+		// udate score
+		updateScore();
   }
 
 	renderMap();
